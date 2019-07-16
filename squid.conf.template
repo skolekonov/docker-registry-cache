@@ -1,5 +1,4 @@
-https_port 443 accel defaultsite={{ registry }} no-vhost cert=/etc/ssl/private/cert.pem key=/etc/ssl/private/key.pem
-http_port 3128
+https_port 443 accel defaultsite={{ registry }} vhost cert=/etc/ssl/private/private.crt
 
 #debug_options ALL,2
 
@@ -10,17 +9,25 @@ quick_abort_min -1
 cache_replacement_policy heap LFUDA
 cache_dir ufs /cache/cc 20000 16 256
 
-cache_peer {{ registry }} parent 443 0 no-query originserver no-digest name=registry login=PASSTHRU ssl sslflags=DONT_VERIFY_PEER
+cache_peer {{ registry }} parent 443 0 no-query originserver no-digest name=registry login=PASSTHRU ssl
+cache_peer {{ mirror }} parent 443 0 no-query originserver no-digest name=mirror login=PASSTHRU ssl
 
-acl registry dstdomain {{ registry }}
-acl mirror dstdomain {{ mirror }}
+acl mutable_paths urlpath_regex ^/v2/[^\/]+/manifests/.*
+acl mutable_paths urlpath_regex ^/v2/[^\/]+/tags/list
+acl mutable_paths urlpath_regex ^/v2/_catalog$
+
+acl registry dstdomain docker-prod-local.{{ proxy_host  }}
+acl mirror dstdomain {{ proxy_host  }}
 
 http_access allow registry
 http_access allow mirror
 
 cache_peer_access registry allow registry
 cache_peer_access registry deny all
+cache_peer_access mirror allow mirror
+cache_peer_access mirror deny all
 
+cache deny mutable_paths
 cache allow registry
 cache allow mirror
 
